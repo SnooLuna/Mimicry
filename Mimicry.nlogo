@@ -111,7 +111,7 @@ end
 to preys-get-eaten  ;; prey procedure                                                      predator meets prey
   let predator-here one-of predators-here
   if predator-here != nobody [
-    ;if [sees? myself] of predator-here [
+    if [sees? myself] of predator-here [
       if [attacks? myself] of predator-here [
         ifelse breed = models [
           ask predator-here [ die ] ;; prey was poisonous
@@ -120,13 +120,13 @@ to preys-get-eaten  ;; prey procedure                                           
         ]
         die                     ;; prey was attacked
       ]
-    ;]
+    ]
   ]
 end
 
 ;; does the predator see the prey?
 to-report sees? [prey] ;; predator procedure
-  if random-float 50 < [visibility] of prey  ;; bottom 50% colors is camouflage
+  if random-float 50 < ([visibility] of prey + 7)  ;; bottom 50% colors is camouflage
     [ report true ]
   report false
 end
@@ -136,9 +136,9 @@ to-report attacks? [prey]
   ;; probability of attack decreases as prey visibility gets closer to avoided range
   let dist abs (prey-visibility - avoidance-mean)
   if dist < avoidance-range [
-    report false ;; avoid it
+    report true ;; avoid it
   ]
-  report true
+  report random-float 100 < 20 ;; EDIT false
 end
 
 
@@ -166,7 +166,7 @@ to hatch-prey ;; prey procedure
       ;; but this can mutate within a certain normal range.
       ;; mean = parent's color, sd = mutation-rate (slider)
       let parent-color [visibility] of myself
-      ;set color to-color random-normal parent-color mutation-rate
+      set color to-color random-normal parent-color mutation-rate
       set visibility from-color color
     ]
  ]
@@ -192,6 +192,7 @@ end
 to hatch-predator ;; predator procedure
   if random-float 100 < reproduction-chance
   [
+
     hatch 1
     [
       fd 1
@@ -572,7 +573,7 @@ carrying-capacity-mimics
 carrying-capacity-mimics
 0
 600
-300.0
+552.0
 1
 1
 NIL
@@ -587,7 +588,7 @@ carrying-capacity-models
 carrying-capacity-models
 0
 600
-300.0
+66.0
 1
 1
 NIL
@@ -602,7 +603,7 @@ carrying-capacity-predators
 carrying-capacity-predators
 0
 300
-100.0
+179.0
 1
 1
 NIL
