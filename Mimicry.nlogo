@@ -10,15 +10,9 @@ mimics-own [
 
 breed [ predators predator ]
 predators-own [
-  avoidance-mean
+  prey-mean
   energy
 ]
-
-globals [
-  color-range-begin               ;; "lowest" color for a prey
-  color-range-end                 ;; "highest" color for a prey
-]
-
 
 
 
@@ -28,15 +22,8 @@ globals [
 
 to setup
   clear-all
-  setup-variables
   setup-turtles
   reset-ticks
-end
-
-;; initialize constants
-to setup-variables
-  set color-range-begin 0
-  set color-range-end 15
 end
 
 ;; create 100 predators and 600 preys of which half are
@@ -45,7 +32,7 @@ end
 ;; the mimics are at the top of the color range.
 
 to setup-turtles
-  ask patches [ set pcolor 58.5 ]
+  ask patches [ set pcolor 107 ]
   set-default-shape models       "ssnake"
   set-default-shape mimics       "cutesnake"
   set-default-shape predators    "hawk"
@@ -53,7 +40,7 @@ to setup-turtles
   create-predators carrying-capacity-predators                                       ;; create predators
   [
     set color brown
-    set avoidance-mean  random-float 100
+    set prey-mean  random-float 100
     set energy 200
     set size 3
   ]
@@ -132,11 +119,11 @@ end
 to-report attacks? [prey]
   let prey-visibility [visibility] of prey
   ;; probability of attack decreases as prey visibility gets closer to avoided range
-  let dist abs (prey-visibility - avoidance-mean)
-  if dist < avoidance-range [
+  let dist abs (prey-visibility - prey-mean)
+  if dist < prey-range - energy * hunger [
     report true ;; avoid it
   ]
-  report random-float 100 < 20 ;; EDIT false
+  report false ;; EDIT random-float 100 < 20
 end
 
 
@@ -194,7 +181,7 @@ to hatch-predator ;; predator procedure
     hatch 1
     [
       fd 1
-      set avoidance-mean  random-normal avoidance-mean avoidance-range / 2
+      set prey-mean  random-normal prey-mean prey-range / 2
     ]
     ; set energy energy / 2  ;; cost to reproduce
  ]
@@ -207,30 +194,44 @@ end
 
 ;; helper to report a random color within range                                                 helper productions
 to-report random-color
-  report random-float (color-range-end - color-range-begin) + color-range-begin
+  report to-color random-float 100
 end
 
 ;; from visibility percentage to color
 to-report to-color [value]
+  if value = 50 [
+    report 19.9
+  ]
   ;; color needs to be within certain range
-  if value > 100 [set value 100]
-  if value < 0  [set value 0]
+  while [value < 0 or value > 100] [
+    if value > 100 [set value 100 - (value - 100)]
+    if value < 0  [set value abs value]
+  ]
 
-  ;; 0-100 -> 10-0+10-15 (white - black - red )
-  set value value / 100 * 15
-  if value < 10 [ set value abs (value - 9.99999999999) ]
+  ;; 0-100 -> green - white - red
+  ifelse value > 50 [
+    set value 15 + sqrt ((value / -2) + 50)
+  ][
+    set value sqrt (value / 2) + 55
+  ]
+
   report value
 end
 
 ;; from color to visibility percentage
 to-report from-color [value]
-  ;; color needs to be within certain range
-  if value > 15 [set value 15]
-  if value < 0  [set value 0]
+  ;; green - white - red -> 0-100
+  ifelse value < 35 [
+    set value -2 * (value - 15) * (value - 15) + 100
+  ][
+    set value 2 * (value - 55) * (value - 55)
+  ]
 
-  ;; white - black - red -> 0-100
-  if value < 10 [ set value abs (value - 9.99999999999) ]
-  set value value / 15 * 100
+  ;; color needs to be within certain range
+  while [value < 0 or value > 100] [
+    if value > 100 [set value 100 - (value - 100)]
+    if value < 0  [set value abs value]
+  ]
   report value
 end
 
@@ -307,7 +308,7 @@ mutation-rate
 mutation-rate
 0
 100
-13.0
+12.0
 1
 1
 NIL
@@ -351,7 +352,7 @@ MONITOR
 76
 893
 121
-NIL
+count edible
 count mimics
 0
 1
@@ -397,7 +398,7 @@ true
 PENS
 "Models" 1.0 0 -2674135 true "" "plot mean [visibility] of models"
 "Mimics" 1.0 0 -13345367 true "" "plot mean [visibility] of mimics"
-"Predator" 1.0 0 -6459832 true "" "plot mean [avoidance-mean] of predators"
+"Predator" 1.0 0 -6459832 true "" "plot mean [prey-mean] of predators"
 
 TEXTBOX
 649
@@ -482,11 +483,11 @@ SLIDER
 276
 188
 309
-avoidance-range
-avoidance-range
+prey-range
+prey-range
 0
 100
-30.0
+100.0
 1
 1
 NIL
@@ -497,7 +498,7 @@ PLOT
 450
 733
 600
-Predator mean avoidance color
+Predator mean preying color
 color
 count
 0.0
@@ -506,7 +507,7 @@ count
 10.0
 true
 false
-"" "histogram [avoidance-mean] of predators\nset-plot-x-range 0 101"
+"" "histogram [prey-mean] of predators\nset-plot-x-range 0 101"
 PENS
 "default" 1.0 1 -16777216 true "" ""
 
@@ -571,7 +572,7 @@ carrying-capacity-mimics
 carrying-capacity-mimics
 0
 600
-552.0
+311.0
 1
 1
 NIL
@@ -586,7 +587,7 @@ carrying-capacity-models
 carrying-capacity-models
 0
 600
-66.0
+187.0
 1
 1
 NIL
@@ -646,8 +647,34 @@ energy-in-prey
 energy-in-prey
 0
 200
-40.0
+66.0
 1
+1
+NIL
+HORIZONTAL
+
+MONITOR
+785
+28
+893
+73
+count mimics
+count mimics with [visibility > 50]
+17
+1
+11
+
+SLIDER
+753
+510
+925
+543
+hunger
+hunger
+-1
+1
+0.35
+0.01
 1
 NIL
 HORIZONTAL
