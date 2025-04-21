@@ -111,7 +111,7 @@ end
 
 ;; does the predator see the prey?
 to-report sees? [prey] ;; predator procedure
-  if random-float 50 < ([visibility] of prey + 7)  ;; bottom 50% colors is camouflage
+  if random-float 100 < ([visibility] of prey + base-visibility)
     [ report true ]
   report false
 end
@@ -120,7 +120,7 @@ to-report attacks? [prey]
   let prey-visibility [visibility] of prey
   ;; probability of attack decreases as prey visibility gets closer to avoided range
   let dist abs (prey-visibility - prey-mean)
-  if dist < prey-range - energy * hunger [
+  if dist < prey-range + energy * energy-importance [
     report true ;; avoid it
   ]
   report false ;; EDIT random-float 100 < 20
@@ -149,9 +149,9 @@ to hatch-prey ;; prey procedure
       fd 1
       ;; the prey will have a color similar to its parent,
       ;; but this can mutate within a certain normal range.
-      ;; mean = parent's color, sd = mutation-rate (slider)
+      ;; mean = parent's color, sd = mutation-range (slider)
       let parent-color [visibility] of myself
-      set color to-color random-normal parent-color mutation-rate
+      set color to-color random-normal parent-color mutation-prey
       set visibility from-color color
     ]
  ]
@@ -181,7 +181,7 @@ to hatch-predator ;; predator procedure
     hatch 1
     [
       fd 1
-      set prey-mean  random-normal prey-mean prey-range / 2
+      set prey-mean from-color to-color random-normal prey-mean mutation-predator
     ]
     ; set energy energy / 2  ;; cost to reproduce
  ]
@@ -299,26 +299,11 @@ NIL
 NIL
 0
 
-SLIDER
-11
-236
-188
-269
-mutation-rate
-mutation-rate
-0
-100
-12.0
-1
-1
-NIL
-HORIZONTAL
-
 MONITOR
-678
-76
-785
-121
+718
+72
+825
+117
 NIL
 count models
 0
@@ -348,10 +333,10 @@ mean [visibility] of models
 11
 
 MONITOR
-786
-76
-893
-121
+826
+72
+933
+117
 count edible
 count mimics
 0
@@ -381,9 +366,9 @@ mean [visibility] of mimics
 11
 
 PLOT
-655
+718
 122
-932
+995
 342
 Average Colors Over Time
 Time
@@ -443,9 +428,9 @@ min [visibility] of mimics
 11
 
 PLOT
-122
+208
 449
-322
+408
 599
 Model Visibility
 color / visibility
@@ -461,9 +446,9 @@ PENS
 "model color" 1.0 1 -16777216 true "" ""
 
 PLOT
-327
+413
 449
-527
+613
 599
 Mimic Visibility
 color / visibility
@@ -480,24 +465,24 @@ PENS
 
 SLIDER
 11
-276
+306
 188
-309
+339
 prey-range
 prey-range
 0
 100
-100.0
+35.0
 1
 1
 NIL
 HORIZONTAL
 
 PLOT
-533
-450
-733
-600
+619
+449
+819
+599
 Predator mean preying color
 color
 count
@@ -512,10 +497,10 @@ PENS
 "default" 1.0 1 -16777216 true "" ""
 
 MONITOR
-744
-451
-850
-496
+824
+449
+930
+494
 energy
 mean [energy] of predators
 17
@@ -523,10 +508,10 @@ mean [energy] of predators
 11
 
 MONITOR
-680
-28
-784
-73
+718
+24
+824
+69
 count Predators
 count predators
 17
@@ -535,9 +520,9 @@ count predators
 
 SLIDER
 11
-317
+342
 187
-350
+375
 reproduction-chance
 reproduction-chance
 0
@@ -550,9 +535,9 @@ HORIZONTAL
 
 SLIDER
 11
-358
+378
 187
-391
+411
 reproduction-threshold
 reproduction-threshold
 0
@@ -587,7 +572,7 @@ carrying-capacity-models
 carrying-capacity-models
 0
 600
-187.0
+205.0
 1
 1
 NIL
@@ -640,9 +625,9 @@ HORIZONTAL
 
 SLIDER
 11
-399
+414
 187
-432
+447
 energy-in-prey
 energy-in-prey
 0
@@ -654,27 +639,116 @@ NIL
 HORIZONTAL
 
 MONITOR
-785
-28
-893
-73
+825
+24
+933
+69
 count mimics
 count mimics with [visibility > 50]
 17
 1
 11
 
+MONITOR
+934
+343
+991
+388
+median
+median [visibility] of models
+3
+1
+11
+
+MONITOR
+934
+389
+991
+434
+median
+mean [visibility] of mimics
+3
+1
+11
+
+MONITOR
+992
+343
+1042
+388
+mode
+one-of modes [round visibility] of models
+3
+1
+11
+
+MONITOR
+992
+389
+1042
+434
+mode
+one-of modes [round visibility] of mimics
+3
+1
+11
+
 SLIDER
-753
-510
-925
-543
-hunger
-hunger
+11
+450
+187
+483
+base-visibility
+base-visibility
+0
+100
+1.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+11
+270
+188
+303
+mutation-prey
+mutation-prey
+0
+100
+10.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+11
+487
+187
+520
+energy-importance
+energy-importance
 -1
 1
-0.35
+0.0
 0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+11
+234
+188
+267
+mutation-predator
+mutation-predator
+0
+100
+10.0
+1
 1
 NIL
 HORIZONTAL
