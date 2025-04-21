@@ -33,8 +33,8 @@ end
 
 to setup-turtles
   ask patches [ set pcolor 107 ]
-  set-default-shape models       "ssnake"
-  set-default-shape mimics       "cutesnake"
+  set-default-shape models       "butterfly viceroy";"ssnake"
+  set-default-shape mimics       "butterfly monarch";"cutesnake"
   set-default-shape predators    "hawk"
 
   create-predators carrying-capacity-predators                                       ;; create predators
@@ -119,11 +119,11 @@ end
 to-report attacks? [prey]
   let prey-visibility [visibility] of prey
   ;; probability of attack decreases as prey visibility gets closer to avoided range
-  let dist abs (prey-visibility - prey-mean)
-  if dist < prey-range + energy * energy-importance [
+  let dist abs (prey-visibility - prey-mean)                                               ;; not sure how the energy should be added here
+  if dist - energy * 0.1 * energy-importance < prey-range [
     report true ;; avoid it
   ]
-  report false ;; EDIT random-float 100 < 20
+  report false  ;; random-float 100 < 20
 end
 
 
@@ -183,7 +183,6 @@ to hatch-predator ;; predator procedure
       fd 1
       set prey-mean from-color to-color random-normal prey-mean mutation-predator
     ]
-    ; set energy energy / 2  ;; cost to reproduce
  ]
 end
 
@@ -266,10 +265,10 @@ ticks
 30.0
 
 BUTTON
-10
-196
-98
-229
+9
+233
+97
+266
 setup
 setup
 NIL
@@ -283,10 +282,10 @@ NIL
 1
 
 BUTTON
-100
-196
-188
-229
+99
+233
+187
+266
 go
 go
 T
@@ -464,15 +463,15 @@ PENS
 "Colubrid Colors" 1.0 1 -16777216 true "" ""
 
 SLIDER
-11
-306
-188
-339
+10
+343
+187
+376
 prey-range
 prey-range
 0
 100
-35.0
+60.0
 1
 1
 NIL
@@ -519,10 +518,10 @@ count predators
 11
 
 SLIDER
-11
-342
-187
-375
+10
+379
+186
+412
 reproduction-chance
 reproduction-chance
 0
@@ -534,10 +533,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-11
-378
-187
-411
+10
+415
+186
+448
 reproduction-threshold
 reproduction-threshold
 0
@@ -557,7 +556,7 @@ carrying-capacity-mimics
 carrying-capacity-mimics
 0
 600
-311.0
+377.0
 1
 1
 NIL
@@ -572,7 +571,7 @@ carrying-capacity-models
 carrying-capacity-models
 0
 600
-205.0
+377.0
 1
 1
 NIL
@@ -624,15 +623,15 @@ NIL
 HORIZONTAL
 
 SLIDER
-11
-414
-187
-447
+10
+451
+186
+484
 energy-in-prey
 energy-in-prey
 0
 200
-66.0
+102.0
 1
 1
 NIL
@@ -694,25 +693,25 @@ one-of modes [round visibility] of mimics
 11
 
 SLIDER
-11
-450
-187
-483
+10
+487
+186
+520
 base-visibility
 base-visibility
 0
 100
-1.0
+2.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-11
-270
-188
-303
+10
+307
+187
+340
 mutation-prey
 mutation-prey
 0
@@ -724,25 +723,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-11
-487
-187
-520
+10
+524
+186
+557
 energy-importance
 energy-importance
 -1
 1
-0.0
-0.01
+-1.0
+0.1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-11
-234
-188
-267
+10
+271
+187
+304
 mutation-predator
 mutation-predator
 0
@@ -752,6 +751,17 @@ mutation-predator
 1
 NIL
 HORIZONTAL
+
+SWITCH
+9
+196
+125
+229
+snakes-eat?
+snakes-eat?
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
