@@ -40,20 +40,23 @@ to setup-turtles
   create-predators carrying-capacity-predators                                       ;; create predators
   [
     set color brown
+    set size 3
+
     set prey-mean  random-float 100
     set energy 200
-    set size 3
   ]
 
   create-models carrying-capacity-models [                                           ;; create prey
     set color to-color 100
-    set visibility from-color color
     set size 1.5
+
+    set visibility from-color color
   ]
   create-mimics carrying-capacity-mimics [
     set color to-color 50
-    set visibility from-color color
     set size 1.5
+
+    set visibility from-color color
   ]
 
   ;; scatter all three breeds around the world
@@ -86,7 +89,7 @@ to go
   tick
 end
 
-to wiggle ;; predator procedure
+to wiggle ;; turtle procedure
   rt random 100
   lt random 100
   fd 1
@@ -120,8 +123,8 @@ to-report attacks? [prey]
   let prey-visibility [visibility] of prey
   ;; probability of attack decreases as prey visibility gets closer to avoided range
   let dist abs (prey-visibility - prey-mean)                                               ;; not sure how the energy should be added here
-  if dist - energy * 0.1 * energy-importance < prey-range [
-    report true ;; avoid it
+  if dist + energy * 0.1 * energy-importance < prey-range [
+    report true ;; attack it
   ]
   report false  ;; random-float 100 < 20
 end
@@ -148,8 +151,8 @@ to hatch-prey ;; prey procedure
     [
       fd 1
       ;; the prey will have a color similar to its parent,
-      ;; but this can mutate within a certain normal range.
-      ;; mean = parent's color, sd = mutation-range (slider)
+      ;; but this can mutate based on a normal range.
+      ;; mean = parent's color, sd = mutation-prey (slider)
       let parent-color [visibility] of myself
       set color to-color random-normal parent-color mutation-prey
       set visibility from-color color
@@ -159,9 +162,11 @@ end
 
 
 
-to predators-age                                                                          ;; predator evolution
+to predators-age ;; predator procedure                                                       predator evolution
   set energy energy - 1
-  if energy <= 0 [ die ]
+  if energy <= 0  [
+    die
+  ]
 end
 
 
@@ -177,10 +182,12 @@ end
 to hatch-predator ;; predator procedure
   if random-float 100 < reproduction-chance
   [
-
     hatch 1
     [
       fd 1
+      ;; the predators will have a predation color similar to its parent,
+      ;; but this can mutate based on a normal range, staying between 0 and 100.
+      ;; mean = parent's color, sd = mutation-predator (slider)
       set prey-mean from-color to-color random-normal prey-mean mutation-predator
     ]
  ]
@@ -488,8 +495,8 @@ count
 0.0
 10.0
 0.0
-10.0
-true
+100.0
+false
 false
 "" "histogram [prey-mean] of predators\nset-plot-x-range 0 101"
 PENS
@@ -616,7 +623,7 @@ visibility-mimic
 visibility-mimic
 0
 100
-50.0
+25.0
 1
 1
 NIL
@@ -631,7 +638,7 @@ energy-in-prey
 energy-in-prey
 0
 200
-102.0
+100.0
 1
 1
 NIL
@@ -701,7 +708,7 @@ base-visibility
 base-visibility
 0
 100
-2.0
+7.0
 1
 1
 NIL
@@ -729,9 +736,9 @@ SLIDER
 557
 energy-importance
 energy-importance
--1
-1
--1.0
+-2
+2
+2.0
 0.1
 1
 NIL
@@ -762,6 +769,36 @@ snakes-eat?
 1
 1
 -1000
+
+TEXTBOX
+130
+198
+280
+224
+< no \nimplementation 
+10
+0.0
+1
+
+PLOT
+997
+173
+1157
+342
+Population counts
+Ticks
+Number of animals
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -10402772 true "" "plot count predators"
+"pen-1" 1.0 0 -5298144 true "" "plot count models"
+"pen-2" 1.0 0 -13345367 true "" "plot count mimics"
 
 @#$#@#$#@
 ## WHAT IS IT?
