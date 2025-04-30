@@ -1,3 +1,9 @@
+
+globals [
+  seed ; random seed used in setup
+]
+
+
 ;; two breeds of prey
 breed [ models model ]
 breed [ mimics mimic ]
@@ -22,6 +28,10 @@ predators-own [
 
 to setup
   clear-all
+  ;; set the seed
+  set seed new-seed
+  random-seed seed
+
   setup-turtles
   reset-ticks
 end
@@ -84,6 +94,7 @@ to go
   ask predators [
     predators-age
     predators-reproduce
+    predators-find-other-food
   ]
 
   tick
@@ -129,7 +140,11 @@ to-report attacks? [prey]
   report false  ;; random-float 100 < 20
 end
 
-
+to predators-find-other-food
+  if random-float 100 < food-available [
+    set energy energy + energy-other-food
+  ]
+end
 
 
 ;; Each prey has an equal chance of reproducing
@@ -247,11 +262,11 @@ end
 GRAPHICS-WINDOW
 208
 12
-637
-442
+641
+446
 -1
 -1
-5.54
+4.25
 1
 10
 1
@@ -262,8 +277,8 @@ GRAPHICS-WINDOW
 1
 1
 0
-75
--75
+99
+-99
 0
 1
 1
@@ -485,9 +500,9 @@ NIL
 HORIZONTAL
 
 PLOT
-619
+617
 449
-819
+817
 599
 Predator mean preying color
 color
@@ -533,7 +548,7 @@ reproduction-chance
 reproduction-chance
 0
 100
-40.0
+5.0
 1
 1
 NIL
@@ -799,6 +814,36 @@ PENS
 "default" 1.0 0 -10402772 true "" "plot count predators"
 "pen-1" 1.0 0 -5298144 true "" "plot count models"
 "pen-2" 1.0 0 -13345367 true "" "plot count mimics"
+
+SLIDER
+10
+561
+186
+594
+food-available
+food-available
+0
+20
+1.5
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+11
+598
+183
+631
+energy-other-food
+energy-other-food
+0
+100
+20.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
