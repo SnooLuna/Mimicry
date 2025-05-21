@@ -1,4 +1,3 @@
-
 globals [
   seed ; random seed used in setup
 ]
@@ -57,13 +56,13 @@ to setup-turtles
   ]
 
   create-models carrying-capacity-models [                                           ;; create prey
-    set color to-color 100
+    set color to-color visibility-model ; random 100
     set size 1.5
 
     set visibility from-color color
   ]
   create-mimics carrying-capacity-mimics [
-    set color to-color 50
+    set color to-color visibility-mimic ; random 100
     set size 1.5
 
     set visibility from-color color
@@ -84,6 +83,7 @@ to go
   ask predators [
     wiggle
   ]
+
   ;; turtles that are not predators are preys
   ask turtles with [breed != predators] [
     wiggle
@@ -92,9 +92,9 @@ to go
   ]
 
   ask predators [
+    predators-find-other-food
     predators-age
     predators-reproduce
-    predators-find-other-food
   ]
 
   tick
@@ -112,10 +112,13 @@ to preys-get-eaten  ;; prey procedure                                           
   if predator-here != nobody [
     if [sees? myself] of predator-here [
       if [attacks? myself] of predator-here [
-        ifelse breed = models [
-          ask predator-here [ die ] ;; prey was poisonous
-        ] [
-          ask predator-here [ set energy energy + energy-in-prey]
+        if breed = models [
+          ask predator-here [
+            set energy energy + energy-in-prey
+            if model_dangerous? [
+              die ;; prey was poisonous
+            ]
+          ]
         ]
         die                     ;; prey was attacked
       ]
@@ -190,7 +193,7 @@ end
 ;; population is.
 ;;                 from original model
 to predators-reproduce ;; predator procedure
-  if random count predators < carrying-capacity-predators - count predators
+  if count predators < carrying-capacity-predators
   [ hatch-predator ]
 end
 
@@ -403,8 +406,10 @@ true
 "" ""
 PENS
 "Models" 1.0 0 -2674135 true "" "plot mean [visibility] of models"
-"Mimics" 1.0 0 -13345367 true "" "plot mean [visibility] of mimics"
+"Mimics > 50" 1.0 0 -13345367 true "" "plot mean [visibility] of mimics with [visibility >= 50]"
 "Predator" 1.0 0 -6459832 true "" "plot mean [prey-mean] of predators"
+"Mimics < 50" 1.0 0 -11783835 true "" "plot mean [visibility] of mimics with [visibility < 50]"
+"Mimics" 1.0 0 -11221820 true "" "plot mean [visibility] of mimics"
 
 TEXTBOX
 649
@@ -493,7 +498,7 @@ prey-range
 prey-range
 0
 100
-60.0
+25.0
 1
 1
 NIL
@@ -555,21 +560,6 @@ NIL
 HORIZONTAL
 
 SLIDER
-10
-415
-186
-448
-reproduction-threshold
-reproduction-threshold
-0
-1000
-115.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
 8
 10
 187
@@ -578,7 +568,7 @@ carrying-capacity-mimics
 carrying-capacity-mimics
 0
 600
-377.0
+255.0
 1
 1
 NIL
@@ -593,7 +583,7 @@ carrying-capacity-models
 carrying-capacity-models
 0
 600
-377.0
+385.0
 1
 1
 NIL
@@ -608,7 +598,7 @@ carrying-capacity-predators
 carrying-capacity-predators
 0
 300
-179.0
+150.0
 1
 1
 NIL
@@ -638,7 +628,7 @@ visibility-mimic
 visibility-mimic
 0
 100
-25.0
+51.0
 1
 1
 NIL
@@ -646,9 +636,9 @@ HORIZONTAL
 
 SLIDER
 10
-451
+415
 186
-484
+448
 energy-in-prey
 energy-in-prey
 0
@@ -716,9 +706,9 @@ one-of modes [round visibility] of mimics
 
 SLIDER
 10
-487
+451
 186
-520
+484
 base-visibility
 base-visibility
 0
@@ -746,14 +736,14 @@ HORIZONTAL
 
 SLIDER
 10
-524
+488
 186
-557
+521
 energy-importance
 energy-importance
 -2
 2
-2.0
+1.5
 0.1
 1
 NIL
@@ -777,23 +767,13 @@ HORIZONTAL
 SWITCH
 9
 196
-125
+161
 229
-snakes-eat?
-snakes-eat?
-1
+model_dangerous?
+model_dangerous?
+0
 1
 -1000
-
-TEXTBOX
-130
-198
-280
-224
-< no \nimplementation 
-10
-0.0
-1
 
 PLOT
 997
@@ -817,9 +797,9 @@ PENS
 
 SLIDER
 10
-561
+525
 186
-594
+558
 food-available
 food-available
 0
@@ -832,14 +812,14 @@ HORIZONTAL
 
 SLIDER
 11
-598
-183
-631
+562
+185
+595
 energy-other-food
 energy-other-food
 0
 100
-20.0
+30.0
 1
 1
 NIL
@@ -1384,6 +1364,128 @@ NetLogo 6.4.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="exp" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="20000"/>
+    <metric>count turtles</metric>
+    <metric>count mimics</metric>
+    <metric>count models</metric>
+    <metric>count predators</metric>
+    <metric>[visibility] of mimics</metric>
+    <metric>[visibility] of models</metric>
+    <metric>[prey-mean] of predators</metric>
+    <metric>list mean [visibility] of mimics</metric>
+    <metric>list mean [visibility] of models</metric>
+    <metric>list mean [prey-mean] of predators</metric>
+    <enumeratedValueSet variable="carrying-capacity-mimics">
+      <value value="300"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-range">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-other-food">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="base-visibility">
+      <value value="7"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-models">
+      <value value="300"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-prey">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-predator">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-importance">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-model">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-in-prey">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="food-available">
+      <value value="1.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-mimic">
+      <value value="51"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="reproduction-chance">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="snakes-eat?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-predators">
+      <value value="150"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="experiment" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="20000"/>
+    <metric>count turtles</metric>
+    <metric>count mimics</metric>
+    <metric>count models</metric>
+    <metric>count predators</metric>
+    <metric>[visibility] of mimics</metric>
+    <metric>[visibility] of models</metric>
+    <metric>[prey-mean] of predators</metric>
+    <metric>list mean [visibility] of mimics</metric>
+    <metric>list mean [visibility] of models</metric>
+    <metric>list mean [prey-mean] of predators</metric>
+    <enumeratedValueSet variable="carrying-capacity-mimics">
+      <value value="255"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-range">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-other-food">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="base-visibility">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-models">
+      <value value="385"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-prey">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-predator">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-importance">
+      <value value="1.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-model">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-in-prey">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="food-available">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-mimic">
+      <value value="51"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="reproduction-chance">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="snakes-eat?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-predators">
+      <value value="150"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
