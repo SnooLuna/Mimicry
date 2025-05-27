@@ -31,6 +31,10 @@ to setup
   set seed new-seed
   random-seed seed
 
+  ;ask patches [set pcolor white]
+  ;ask patches with [pxcor = 50] [sprout-mimics 1 [set color to-color ycor set visibility ycor]]
+  ;ask patches with [pycor = -50] [sprout-mimics 1 [set color to-color xcor set visibility xcor]]
+
   setup-turtles
   reset-ticks
 end
@@ -51,18 +55,18 @@ to setup-turtles
     set color brown
     set size 3
 
-    set prey-mean  random-float 100
+    set prey-mean ifelse-value (predator-set-visibility?) [prey-visibility-predator] [random-float 200 - 100]
     set energy 200
   ]
 
   create-models carrying-capacity-models [                                           ;; create prey
-    set color to-color visibility-model ; random 100
+    set color to-color ifelse-value (model-set-visibility?) [visibility-model] [random 200 - 100]
     set size 1.5
 
     set visibility from-color color
   ]
   create-mimics carrying-capacity-mimics [
-    set color to-color visibility-mimic ; random 100
+    set color to-color ifelse-value mimic-set-visibility? [visibility-mimic] [random 200 - 100]
     set size 1.5
 
     set visibility from-color color
@@ -128,7 +132,7 @@ end
 
 ;; does the predator see the prey?
 to-report sees? [prey] ;; predator procedure
-  if random-float 100 < ([visibility] of prey + base-visibility)
+  if random-float 100 < ((abs [visibility] of prey) + base-visibility)
     [ report true ]
   report false
 end
@@ -136,8 +140,9 @@ end
 to-report attacks? [prey]
   let prey-visibility [visibility] of prey
   ;; probability of attack decreases as prey visibility gets closer to avoided range
-  let dist abs (prey-visibility - prey-mean)                                               ;; not sure how the energy should be added here
-  if dist + energy * 0.1 * energy-importance < prey-range [
+  let dist abs (prey-visibility - prey-mean)
+  if dist > 100 [set dist 200 - dist]
+  if dist < prey-range + (0.1 ^ energy) * riskiness [
     report true ;; attack it
   ]
   report false  ;; random-float 100 < 20
@@ -226,35 +231,50 @@ to-report to-color [value]
   if value = 50 [
     report 19.9
   ]
+  if value = -50 [
+    report 50
+  ]
+
   ;; color needs to be within certain range
-  while [value < 0 or value > 100] [
-    if value > 100 [set value 100 - (value - 100)]
-    if value < 0  [set value abs value]
+  while [value < -100 or value > 100] [
+    if value > 100 [set value -100 + (value - 100)]
+    if value < -100  [set value 100 - (value + 100)]
   ]
-
-  ;; 0-100 -> green - white - red
-  ifelse value > 50 [
-    set value 15 + sqrt ((value / -2) + 50)
+  ifelse value > 0 [
+    ;; 0 to 100 -> green - white - red
+    ifelse value > 50 [
+      set value -0.1 * value + 25    ; red
+    ][
+      set value 0.1 * value + 55     ; green
+    ]
   ][
-    set value sqrt (value / 2) + 55
+    ;; 0 to -100 -> green - black - red
+    ifelse value < -50 [
+      set value -0.1 * value + 5     ; red
+    ][
+      set value 0.1 * value + 55     ; green
+    ]
   ]
-
   report value
 end
 
 ;; from color to visibility percentage
 to-report from-color [value]
-  ;; green - white - red -> 0-100
-  ifelse value < 35 [
-    set value -2 * (value - 15) * (value - 15) + 100
+  ;; green - white - red -> 0 to 100
+  ifelse value < 35 [                                    ; red side
+    ifelse value > 15 [                                  ; light
+      set value -10 * value + 250
+    ][                                                   ; dark
+      set value -10 * value + 50
+    ]
   ][
-    set value 2 * (value - 55) * (value - 55)
+    set value 10 * value - 550
   ]
 
   ;; color needs to be within certain range
-  while [value < 0 or value > 100] [
-    if value > 100 [set value 100 - (value - 100)]
-    if value < 0  [set value abs value]
+  while [value < -100 or value > 100] [
+    if value > 100 [set value -100 + (value - 100)]
+    if value < -100  [set value 100 - (value + 100)]
   ]
   report value
 end
@@ -290,10 +310,10 @@ ticks
 30.0
 
 BUTTON
-9
-233
-97
-266
+10
+268
+98
+301
 setup
 setup
 NIL
@@ -307,10 +327,10 @@ NIL
 1
 
 BUTTON
-99
-233
-187
-266
+100
+268
+188
+301
 go
 go
 T
@@ -399,16 +419,16 @@ Time
 Average Visibility
 0.0
 100.0
-0.0
+-100.0
 100.0
 true
 true
 "" ""
 PENS
 "Models" 1.0 0 -2674135 true "" "plot mean [visibility] of models"
-"Mimics > 50" 1.0 0 -13345367 true "" "plot mean [visibility] of mimics with [visibility >= 50]"
+"Mimics > 0" 1.0 0 -13345367 true "" "plot mean [visibility] of mimics with [visibility > 0]"
 "Predator" 1.0 0 -6459832 true "" "plot mean [prey-mean] of predators"
-"Mimics < 50" 1.0 0 -11783835 true "" "plot mean [visibility] of mimics with [visibility < 50]"
+"Mimics < 0" 1.0 0 -11783835 true "" "plot mean [visibility] of mimics with [visibility < 0]"
 "Mimics" 1.0 0 -11221820 true "" "plot mean [visibility] of mimics"
 
 TEXTBOX
@@ -461,13 +481,13 @@ PLOT
 Model Visibility
 color / visibility
 count
-0.0
+-101.0
 101.0
 0.0
 300.0
 false
 false
-"" "histogram [visibility] of models\nset-plot-x-range 0 101"
+"" "histogram [visibility] of models\nset-plot-x-range -101 101"
 PENS
 "model color" 1.0 1 -16777216 true "" ""
 
@@ -479,26 +499,26 @@ PLOT
 Mimic Visibility
 color / visibility
 count
-0.0
+-101.0
 101.0
 0.0
 300.0
 false
 false
-"" "histogram [visibility] of mimics\nset-plot-x-range 0 101"
+"" "histogram [visibility] of mimics\nset-plot-x-range -101 101"
 PENS
 "Colubrid Colors" 1.0 1 -16777216 true "" ""
 
 SLIDER
-10
-343
-187
-376
+11
+378
+188
+411
 prey-range
 prey-range
 0
 100
-25.0
+30.0
 1
 1
 NIL
@@ -518,7 +538,7 @@ count
 100.0
 false
 false
-"" "histogram [prey-mean] of predators\nset-plot-x-range 0 101"
+"" "histogram [prey-mean] of predators\nset-plot-x-range -101 101"
 PENS
 "default" 1.0 1 -16777216 true "" ""
 
@@ -545,16 +565,16 @@ count predators
 11
 
 SLIDER
-10
-379
-186
-412
+11
+414
+187
+447
 reproduction-chance
 reproduction-chance
 0
-100
-5.0
-1
+10
+1.3
+0.1
 1
 NIL
 HORIZONTAL
@@ -568,7 +588,7 @@ carrying-capacity-mimics
 carrying-capacity-mimics
 0
 600
-255.0
+333.0
 1
 1
 NIL
@@ -583,7 +603,7 @@ carrying-capacity-models
 carrying-capacity-models
 0
 600
-385.0
+179.0
 1
 1
 NIL
@@ -598,47 +618,17 @@ carrying-capacity-predators
 carrying-capacity-predators
 0
 300
-150.0
+124.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-9
-122
+11
+450
 187
-155
-visibility-model
-visibility-model
-0
-100
-100.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-9
-158
-187
-191
-visibility-mimic
-visibility-mimic
-0
-100
-51.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-10
-415
-186
-448
+483
 energy-in-prey
 energy-in-prey
 0
@@ -705,70 +695,70 @@ one-of modes [round visibility] of mimics
 11
 
 SLIDER
-10
-451
-186
-484
-base-visibility
-base-visibility
-0
-100
-7.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-10
-307
+11
+486
 187
-340
-mutation-prey
-mutation-prey
+519
+base-visibility
+base-visibility
 0
 100
-10.0
+20.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-10
-488
-186
-521
-energy-importance
-energy-importance
+11
+342
+188
+375
+mutation-prey
+mutation-prey
+0
+100
+15.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+11
+523
+187
+556
+riskiness
+riskiness
 -2
-2
-1.5
+10
+0.5
 0.1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-10
-271
-187
-304
+11
+306
+188
+339
 mutation-predator
 mutation-predator
 0
 100
-10.0
+9.0
 1
 1
 NIL
 HORIZONTAL
 
 SWITCH
-9
-196
-161
-229
+10
+231
+188
+264
 model_dangerous?
 model_dangerous?
 0
@@ -796,10 +786,10 @@ PENS
 "pen-2" 1.0 0 -13345367 true "" "plot count mimics"
 
 SLIDER
-10
-525
-186
-558
+11
+560
+187
+593
 food-available
 food-available
 0
@@ -811,15 +801,93 @@ NIL
 HORIZONTAL
 
 SLIDER
-11
-562
-185
-595
+12
+597
+186
+630
 energy-other-food
 energy-other-food
 0
 100
 30.0
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+8
+153
+188
+186
+model-set-visibility?
+model-set-visibility?
+0
+1
+-1000
+
+SWITCH
+8
+118
+188
+151
+mimic-set-visibility?
+mimic-set-visibility?
+0
+1
+-1000
+
+SWITCH
+7
+189
+188
+222
+predator-set-visibility?
+predator-set-visibility?
+0
+1
+-1000
+
+SLIDER
+45
+117
+188
+150
+visibility-mimic
+visibility-mimic
+-100
+100
+0.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+45
+152
+188
+185
+visibility-model
+visibility-model
+-100
+100
+100.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+45
+188
+188
+221
+prey-visibility-predator
+prey-visibility-predator
+-100
+100
+5.0
 1
 1
 NIL
