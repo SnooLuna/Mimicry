@@ -198,7 +198,7 @@ end
 ;; population is.
 ;;                 from original model
 to predators-reproduce ;; predator procedure
-  if count predators < carrying-capacity-predators
+  if count predators < carrying-capacity-predators and energy > reproduction-cost
   [ hatch-predator ]
 end
 
@@ -238,7 +238,7 @@ to-report to-color [value]
   ;; color needs to be within certain range
   while [value < -100 or value > 100] [
     if value > 100 [set value -100 + (value - 100)]
-    if value < -100  [set value 100 - (value + 100)]
+    if value < -100  [set value 100 + (value + 100)]
   ]
   ifelse value > 0 [
     ;; 0 to 100 -> green - white - red
@@ -274,7 +274,7 @@ to-report from-color [value]
   ;; color needs to be within certain range
   while [value < -100 or value > 100] [
     if value > 100 [set value -100 + (value - 100)]
-    if value < -100  [set value 100 - (value + 100)]
+    if value < -100  [set value 100 + (value + 100)]
   ]
   report value
 end
@@ -703,7 +703,7 @@ base-visibility
 base-visibility
 0
 100
-20.0
+15.0
 1
 1
 NIL
@@ -801,10 +801,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-12
-597
-186
-630
+11
+595
+187
+628
 energy-other-food
 energy-other-food
 0
@@ -888,6 +888,21 @@ prey-visibility-predator
 -100
 100
 5.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+11
+631
+187
+664
+reproduction-cost
+reproduction-cost
+0
+200
+0.0
 1
 1
 NIL
