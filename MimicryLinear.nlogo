@@ -58,18 +58,18 @@ to setup-turtles
     set color brown
     set size 3
 
-    set prey-mean ifelse-value (predator-set-visibility?) [prey-visibility-predator] [random-float 200 - 100]
+    set prey-mean ifelse-value (predator-set-visibility?) [prey-visibility-predator] [random-float 100]
     set energy 200
   ]
 
   create-models carrying-capacity-models [                                           ;; create prey
-    set color to-color ifelse-value (model-set-visibility?) [visibility-model] [random 200 - 100]
+    set color to-color ifelse-value (model-set-visibility?) [visibility-model] [random 100]
     set size 1.5
 
     set visibility from-color color
   ]
   create-mimics carrying-capacity-mimics [
-    set color to-color ifelse-value mimic-set-visibility? [visibility-mimic] [random 200 - 100]
+    set color to-color ifelse-value mimic-set-visibility? [visibility-mimic] [random 100]
     set size 1.5
 
     set visibility from-color color
@@ -144,12 +144,12 @@ to-report attacks? [prey]
   let prey-visibility [visibility] of prey
   ;; probability of attack decreases as prey visibility gets closer to avoided range
   let dist abs (prey-visibility - prey-mean)
-  if dist > 100 [set dist 200 - dist]
   if dist > prey-range [ report false ]
-  if random prey-range < (prey-range - dist) [
-    report true
-  ]
-  report false
+  if random prey-range < (prey-range - dist) [ report true ]
+  ;if dist < prey-range + (0.1 ^ energy) [
+  ;  report true ;; attack it
+  ;]
+  report false  ;; random-float 100 < 20
 end
 
 to predators-find-other-food
@@ -234,50 +234,35 @@ to-report to-color [value]
   if value = 50 [
     report 19.9
   ]
-  if value = -50 [
-    report 50
+  ;; color needs to be within certain range
+  while [value < 0 or value > 100] [
+    if value > 100 [set value 100 - (value - 100)]
+    if value < 0  [set value abs value]
   ]
 
-  ;; color needs to be within certain range
-  while [value < -100 or value > 100] [
-    if value > 100 [set value -100 + (value - 100)]
-    if value < -100  [set value 100 + (value + 100)]
-  ]
-  ifelse value > 0 [
-    ;; 0 to 100 -> green - white - red
-    ifelse value > 50 [
-      set value -0.1 * value + 25    ; red
-    ][
-      set value 0.1 * value + 55     ; green
-    ]
+  ;; 0-100 -> green - white - red
+  ifelse value > 50 [
+    set value 15 + sqrt ((value / -2) + 50)
   ][
-    ;; 0 to -100 -> green - black - red
-    ifelse value < -50 [
-      set value -0.1 * value + 5     ; red
-    ][
-      set value 0.1 * value + 55     ; green
-    ]
+    set value sqrt (value / 2) + 55
   ]
+
   report value
 end
 
 ;; from color to visibility percentage
 to-report from-color [value]
-  ;; green - white - red -> 0 to 100
-  ifelse value < 35 [                                    ; red side
-    ifelse value > 15 [                                  ; light
-      set value -10 * value + 250
-    ][                                                   ; dark
-      set value -10 * value + 50
-    ]
+  ;; green - white - red -> 0-100
+  ifelse value < 35 [
+    set value -2 * (value - 15) * (value - 15) + 100
   ][
-    set value 10 * value - 550
+    set value 2 * (value - 55) * (value - 55)
   ]
 
   ;; color needs to be within certain range
-  while [value < -100 or value > 100] [
-    if value > 100 [set value -100 + (value - 100)]
-    if value < -100  [set value 100 + (value + 100)]
+  while [value < 0 or value > 100] [
+    if value > 100 [set value 100 - (value - 100)]
+    if value < 0  [set value abs value]
   ]
   report value
 end
@@ -286,13 +271,13 @@ end
 ; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
-208
-12
-641
-446
+195
+10
+724
+540
 -1
 -1
-4.25
+5.21
 1
 10
 1
@@ -313,9 +298,9 @@ ticks
 30.0
 
 BUTTON
-10
+11
 268
-98
+99
 301
 setup
 setup
@@ -330,9 +315,9 @@ NIL
 1
 
 BUTTON
-100
+101
 268
-188
+189
 301
 go
 go
@@ -347,10 +332,10 @@ NIL
 0
 
 MONITOR
-645
-69
-752
-114
+1011
+137
+1104
+182
 NIL
 count models
 0
@@ -358,10 +343,10 @@ count models
 11
 
 MONITOR
-790
-343
-861
-388
+857
+234
+918
+279
 maximum
 max [visibility] of models
 3
@@ -369,10 +354,10 @@ max [visibility] of models
 11
 
 MONITOR
-718
-343
-789
-388
+798
+234
+854
+279
 average
 mean [visibility] of models
 3
@@ -380,10 +365,10 @@ mean [visibility] of models
 11
 
 MONITOR
-753
-69
-860
-114
+1011
+185
+1104
+230
 NIL
 count mimics
 0
@@ -391,10 +376,10 @@ count mimics
 11
 
 MONITOR
-790
-389
-861
-434
+857
+280
+918
+325
 maximum
 max [visibility] of mimics
 3
@@ -402,10 +387,10 @@ max [visibility] of mimics
 11
 
 MONITOR
-718
-389
-789
-434
+798
+280
+854
+325
 average
 mean [visibility] of mimics
 3
@@ -413,52 +398,50 @@ mean [visibility] of mimics
 11
 
 PLOT
-645
-119
-922
-339
+730
+10
+1007
+230
 Average Colors Over Time
 Time
 Average Visibility
 0.0
 100.0
--100.0
+0.0
 100.0
 true
 true
 "" ""
 PENS
+"Mimics" 1.0 0 -10899396 true "" "plot mean [visibility] of mimics"
 "Models" 1.0 0 -2674135 true "" "plot mean [visibility] of models"
 "Predators" 1.0 0 -6459832 true "" "plot mean [prey-mean] of predators"
-"Mimics > 0" 1.0 0 -13345367 true "" "plot mean [visibility] of mimics with [visibility >= 0]"
-"Mimics < 0" 1.0 0 -11783835 true "" "plot mean [visibility] of mimics with [visibility <= 0]"
-"Mimics" 1.0 0 -11221820 true "" "plot mean [visibility] of mimics"
 
 TEXTBOX
-649
-357
-735
-375
+732
+244
+798
+262
 Model colors:
 11
 0.0
 1
 
 TEXTBOX
-650
-399
-730
-417
+733
+286
+799
+304
 Mimic colors:
 11
 0.0
 1
 
 MONITOR
-862
-343
-933
-388
+921
+234
+978
+279
 minimum
 min [visibility] of models
 3
@@ -466,10 +449,10 @@ min [visibility] of models
 11
 
 MONITOR
-862
-389
-933
-434
+921
+280
+978
+325
 minimum
 min [visibility] of mimics
 3
@@ -477,45 +460,45 @@ min [visibility] of mimics
 11
 
 PLOT
-208
-449
-408
-599
+730
+329
+930
+479
 Model Visibility
-color / visibility
+visibility level
 count
--101.0
+0.0
 101.0
 0.0
 300.0
 false
 false
-"" "histogram [visibility] of models\nset-plot-x-range -101 101"
+"" "histogram [visibility] of models\nset-plot-x-range 0 101"
 PENS
-"model color" 1.0 1 -16777216 true "" ""
+"model color" 1.0 1 -5298144 true "" ""
 
 PLOT
-413
-449
-613
-599
+730
+482
+930
+632
 Mimic Visibility
-color / visibility
+visibility level
 count
--101.0
+0.0
 101.0
 0.0
 300.0
 false
 false
-"" "histogram [visibility] of mimics\nset-plot-x-range -101 101"
+"" "histogram [visibility] of mimics\nset-plot-x-range 0 101"
 PENS
-"Colubrid Colors" 1.0 1 -16777216 true "" ""
+"Colubrid Colors" 1.0 1 -12087248 true "" ""
 
 SLIDER
-11
+12
 378
-188
+189
 411
 prey-range
 prey-range
@@ -528,12 +511,12 @@ NIL
 HORIZONTAL
 
 PLOT
-617
-449
-817
-599
+932
+482
+1132
+632
 Predator mean preying color
-color
+preying mean
 count
 0.0
 10.0
@@ -541,26 +524,26 @@ count
 100.0
 false
 false
-"" "histogram [prey-mean] of predators\nset-plot-x-range -101 101"
+"" "histogram [prey-mean] of predators\nset-plot-x-range 0 101"
 PENS
-"default" 1.0 1 -16777216 true "" ""
+"default" 1.0 1 -8431303 true "" ""
 
 MONITOR
-824
-449
-930
-494
-energy
+1012
+10
+1105
+55
+mean energy
 mean [energy] of predators
-17
+2
 1
 11
 
 MONITOR
-645
-21
-751
-66
+1011
+89
+1104
+134
 count Predators
 count predators
 17
@@ -568,9 +551,9 @@ count predators
 11
 
 SLIDER
-11
+12
 414
-187
+188
 447
 reproduction-chance
 reproduction-chance
@@ -583,39 +566,39 @@ NIL
 HORIZONTAL
 
 SLIDER
-8
+9
 10
-187
+188
 43
 carrying-capacity-mimics
 carrying-capacity-mimics
 0
 600
-200.0
+600.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-8
+9
 45
-187
+188
 78
 carrying-capacity-models
 carrying-capacity-models
 0
 600
-300.0
+10.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-8
+9
 81
-187
+188
 114
 carrying-capacity-predators
 carrying-capacity-predators
@@ -628,9 +611,9 @@ NIL
 HORIZONTAL
 
 SLIDER
-11
+12
 450
-187
+188
 483
 energy-in-prey
 energy-in-prey
@@ -643,10 +626,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-934
-343
-991
-388
+981
+234
+1038
+279
 median
 median [visibility] of models
 3
@@ -654,10 +637,10 @@ median [visibility] of models
 11
 
 MONITOR
-934
-389
-991
-434
+981
+280
+1038
+325
 median
 mean [visibility] of mimics
 3
@@ -665,10 +648,10 @@ mean [visibility] of mimics
 11
 
 MONITOR
-992
-343
-1042
-388
+1041
+234
+1104
+279
 mode
 one-of modes [round visibility] of models
 3
@@ -676,10 +659,10 @@ one-of modes [round visibility] of models
 11
 
 MONITOR
-992
-389
-1042
-434
+1041
+280
+1104
+325
 mode
 one-of modes [round visibility] of mimics
 3
@@ -687,24 +670,24 @@ one-of modes [round visibility] of mimics
 11
 
 SLIDER
-11
+12
 486
-187
+188
 519
 base-visibility
 base-visibility
 0
 100
-10.0
+15.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-11
+12
 342
-188
+189
 375
 mutation-prey
 mutation-prey
@@ -717,9 +700,9 @@ NIL
 HORIZONTAL
 
 SLIDER
-11
+12
 306
-188
+189
 339
 mutation-predator
 mutation-predator
@@ -732,40 +715,40 @@ NIL
 HORIZONTAL
 
 SWITCH
-10
+11
 231
-188
+189
 264
 model-dangerous?
 model-dangerous?
-1
+0
 1
 -1000
 
 PLOT
-924
-170
-1084
-339
+933
+329
+1133
+479
 Population counts
 Ticks
-Number of animals
+Agent count
 0.0
 10.0
 0.0
 10.0
 true
-false
+true
 "" ""
 PENS
-"default" 1.0 0 -10402772 true "" "plot count predators"
-"pen-1" 1.0 0 -5298144 true "" "plot count models"
-"pen-2" 1.0 0 -13345367 true "" "plot count mimics"
+"Mimics" 1.0 0 -10899396 true "" "plot count mimics"
+"Models" 1.0 0 -2674135 true "" "plot count models"
+"Predators" 1.0 0 -6459832 true "" "plot count predators"
 
 SLIDER
-11
+12
 524
-187
+188
 557
 food-available
 food-available
@@ -778,9 +761,9 @@ NIL
 HORIZONTAL
 
 SLIDER
-11
+12
 559
-187
+188
 592
 energy-other-food
 energy-other-food
@@ -793,9 +776,9 @@ NIL
 HORIZONTAL
 
 SWITCH
-8
+9
 153
-188
+189
 186
 model-set-visibility?
 model-set-visibility?
@@ -804,35 +787,35 @@ model-set-visibility?
 -1000
 
 SWITCH
-8
+9
 118
-188
+189
 151
 mimic-set-visibility?
 mimic-set-visibility?
-0
+1
 1
 -1000
 
 SWITCH
-7
+8
 189
-188
+189
 222
 predator-set-visibility?
 predator-set-visibility?
-0
+1
 1
 -1000
 
 SLIDER
-45
+46
 117
-188
+189
 150
 visibility-mimic
 visibility-mimic
--100
+0
 100
 0.0
 1
@@ -841,13 +824,13 @@ NIL
 HORIZONTAL
 
 SLIDER
-45
+46
 152
-188
+189
 185
 visibility-model
 visibility-model
--100
+0
 100
 100.0
 1
@@ -856,13 +839,13 @@ NIL
 HORIZONTAL
 
 SLIDER
-45
+46
 188
-188
+189
 221
 prey-visibility-predator
 prey-visibility-predator
--100
+0
 100
 0.0
 1
@@ -1599,79 +1582,10 @@ NetLogo 6.4.0
       <value value="140"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="200norm" repetitions="1" runMetricsEveryStep="true">
+  <experiment name="linear" repetitions="1" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
-    <timeLimit steps="200000"/>
-    <metric>count turtles</metric>
-    <metric>count mimics</metric>
-    <metric>count models</metric>
-    <metric>count predators</metric>
-    <metric>[visibility] of mimics</metric>
-    <metric>[visibility] of models</metric>
-    <metric>[prey-mean] of predators</metric>
-    <metric>list mean [visibility] of mimics</metric>
-    <metric>list mean [visibility] of models</metric>
-    <metric>list mean [prey-mean] of predators</metric>
-    <enumeratedValueSet variable="carrying-capacity-mimics">
-      <value value="200"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="mimic-set-visibility?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="prey-range">
-      <value value="30"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="energy-other-food">
-      <value value="30"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="base-visibility">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="prey-visibility-predator">
-      <value value="0"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="carrying-capacity-models">
-      <value value="300"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="mutation-prey">
-      <value value="15"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="mutation-predator">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="visibility-model">
-      <value value="100"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="energy-in-prey">
-      <value value="100"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="model-set-visibility?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="food-available">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="visibility-mimic">
-      <value value="0"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="reproduction-chance">
-      <value value="0.7"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="model-dangerous?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="predator-set-visibility?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="carrying-capacity-predators">
-      <value value="150"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="200bignodanger" repetitions="1" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <timeLimit steps="200000"/>
+    <timeLimit steps="50000"/>
     <metric>count turtles</metric>
     <metric>count mimics</metric>
     <metric>count models</metric>
@@ -1732,6 +1646,206 @@ NetLogo 6.4.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="predator-set-visibility?">
       <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-predators">
+      <value value="150"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="linearRandom" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="50000"/>
+    <metric>count turtles</metric>
+    <metric>count mimics</metric>
+    <metric>count models</metric>
+    <metric>count predators</metric>
+    <metric>[visibility] of mimics</metric>
+    <metric>[visibility] of models</metric>
+    <metric>[prey-mean] of predators</metric>
+    <metric>list mean [visibility] of mimics</metric>
+    <metric>list mean [visibility] of models</metric>
+    <metric>list mean [prey-mean] of predators</metric>
+    <enumeratedValueSet variable="carrying-capacity-mimics">
+      <value value="200"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mimic-set-visibility?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-range">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-other-food">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="base-visibility">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-visibility-predator">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-models">
+      <value value="300"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-prey">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-predator">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-model">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-in-prey">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="model-set-visibility?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="food-available">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-mimic">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="reproduction-chance">
+      <value value="0.7"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="model-dangerous?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predator-set-visibility?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-predators">
+      <value value="150"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="ranran" repetitions="100" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="10005"/>
+    <metric>median [visibility] of models</metric>
+    <metric>median [visibility] of mimics</metric>
+    <runMetricsCondition>ticks = 10000</runMetricsCondition>
+    <enumeratedValueSet variable="carrying-capacity-mimics">
+      <value value="200"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mimic-set-visibility?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-range">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-other-food">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="base-visibility">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-visibility-predator">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-models">
+      <value value="300"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-prey">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-predator">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-model">
+      <value value="4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-in-prey">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="model-set-visibility?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="food-available">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-mimic">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="reproduction-chance">
+      <value value="0.7"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="model-dangerous?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predator-set-visibility?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-predators">
+      <value value="150"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="fewmodels" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="50000"/>
+    <metric>count turtles</metric>
+    <metric>count mimics</metric>
+    <metric>count models</metric>
+    <metric>count predators</metric>
+    <metric>[visibility] of mimics</metric>
+    <metric>[visibility] of models</metric>
+    <metric>[prey-mean] of predators</metric>
+    <metric>list mean [visibility] of mimics</metric>
+    <metric>list mean [visibility] of models</metric>
+    <metric>list mean [prey-mean] of predators</metric>
+    <enumeratedValueSet variable="carrying-capacity-mimics">
+      <value value="600"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mimic-set-visibility?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-range">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-other-food">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="base-visibility">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-visibility-predator">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-models">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-prey">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-predator">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-model">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-in-prey">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="model-set-visibility?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="food-available">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-mimic">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="reproduction-chance">
+      <value value="0.7"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="model-dangerous?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predator-set-visibility?">
+      <value value="false"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="carrying-capacity-predators">
       <value value="150"/>
