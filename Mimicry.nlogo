@@ -4,21 +4,21 @@ globals [
 
 
 ;; two breeds of prey
-breed [ models model ]
-breed [ mimics mimic ]
+breed [ models model ]  ; lethal models
+breed [ mimics mimic ]  ; harmless mimics
 models-own [
-  visibility
+  visibility  ; the color of a prey agent and how visible they are
 ]
 mimics-own [
   visibility
 ]
 
+;; breed of predators
 breed [ predators predator ]
 predators-own [
-  prey-mean
+  prey-mean  ; which visibility level they see as edible
   energy
 ]
-
 
 
 ;;
@@ -27,7 +27,7 @@ predators-own [
 
 to setup
   clear-all
-  ;; set the seed
+
   set seed new-seed
   random-seed seed
 
@@ -35,22 +35,10 @@ to setup
   reset-ticks
 end
 
-to color-test
-  clear-all
-  ask patches [set pcolor black]
-  ask patches with [pxcor = 50] [sprout-mimics 1 [set color to-color ycor set visibility ycor]]
-  ask patches with [pycor = -50] [sprout-mimics 1 [set color to-color xcor set visibility xcor]]
-end
-
-;; create 100 predators and 600 preys of which half are
-;; models and half are mimics. Initially, the
-;; models are at the middle of the color range and
-;; the mimics are at the top of the color range.
-
 to setup-turtles
   ask patches [ set pcolor 78.8 ]
-  set-default-shape models       "butterfly viceroy";"ssnake"
-  set-default-shape mimics       "butterfly monarch";"cutesnake"
+  set-default-shape models       "butterfly viceroy"   ; shapes taken from Wilensky
+  set-default-shape mimics       "butterfly monarch"
   set-default-shape predators    "hawk"
 
   create-predators carrying-capacity-predators                                       ;; create predators
@@ -87,20 +75,19 @@ end
 ;;
 
 to go
-  ;; turtles that are not predators are preys
-  ask turtles with [breed != predators] [
+  ;; all agents move
+  ask turtles [
     wiggle
   ]
 
   ask predators [
-    wiggle
-    predators-eat
+    predators-eat                ; predators might die here
     predators-find-other-food
-    predators-age
+    predators-age                ; predators might die here
     predators-reproduce
   ]
 
-  ;; turtles that are not predators are preys
+  ;; turtles that are not predators are prey
   ask turtles with [breed != predators] [
     preys-reproduce
   ]
@@ -108,14 +95,15 @@ to go
   tick
 end
 
-to wiggle ;; turtle procedure
+
+to wiggle  ; turtle procedure
   rt random 100
   lt random 100
   fd 1
 end
 
-
-to predators-eat  ;; predator procedure                                                  predator meets prey
+;; predator meets prey and maybe attacks it
+to predators-eat  ; predator procedure
   let prey-here one-of turtles-here with [breed != predators]
   if prey-here != nobody [
     if sees? prey-here [
@@ -123,71 +111,41 @@ to predators-eat  ;; predator procedure                                         
         if [breed] of prey-here = models [
           if model-dangerous? [
             ask prey-here [ die ]
-            die                                  ;; prey was poisonous
+            die                                  ; prey was poisonous
           ]
         ]
-        set energy energy + energy-in-prey       ;; prey was edible
         ask prey-here [ die ]
+        set energy energy + energy-in-prey       ; prey was edible
       ]
     ]
   ]
 end
 
-;; does the predator see the prey?
-to-report sees? [prey] ;; predator procedure
+;; can the predator see the prey?
+to-report sees? [prey] ; predator procedure
   if random-float 100 < ((abs [visibility] of prey) + base-visibility)
     [ report true ]
   report false
 end
 
-to-report attacks? [prey]
+to-report attacks? [prey] ; predator procedure
   let prey-visibility [visibility] of prey
-  ;; probability of attack decreases as prey visibility gets closer to avoided range
+  ;; probability of attack depends on proximity to prey-mean
   let dist abs (prey-visibility - prey-mean)
   if dist > 100 [set dist 200 - dist]
+  ;; do not attack outside preying range
   if dist > prey-range [ report false ]
-  if random prey-range < (prey-range - dist) [
-    report true
-  ]
+  ;; lower dist means more chance to attack
+  if random prey-range < (prey-range - dist) [ report true ]
   report false
 end
 
-to predators-find-other-food
+;; the predators have a chance to gain energy randomly
+to predators-find-other-food ; predator procedure
   if random-float 100 < food-available [
     set energy energy + energy-other-food
   ]
 end
-
-
-;; Each prey has an equal chance of reproducing
-;; depending on how close to carrying capacity the
-;; population is.
-;;                 from original model
-to preys-reproduce ;; prey procedure                                                          prey evolution
-  ifelse breed = models
-  [ if random count models < carrying-capacity-models - count models
-     [ hatch-prey ] ]
-  [ if random count mimics < carrying-capacity-mimics - count mimics
-     [ hatch-prey ] ]
-end
-
-to hatch-prey ;; prey procedure
-  if random-float 100 < reproduction-chance
-  [
-    hatch 1
-    [
-      fd 1
-      ;; the prey will have a color similar to its parent,
-      ;; but this can mutate based on a normal range.
-      ;; mean = parent's color, sd = mutation-prey (slider)
-      let parent-color [visibility] of myself
-      set color to-color random-normal parent-color mutation-prey
-      set visibility from-color color
-    ]
- ]
-end
-
-
 
 to predators-age ;; predator procedure                                                       predator evolution
   set energy energy - 1
@@ -196,7 +154,7 @@ to predators-age ;; predator procedure                                          
   ]
 end
 
-
+;;         Unaltered from Wilensky model
 ;; Each predator has an equal chance of reproducing
 ;; depending on how close to carrying capacity the
 ;; population is.
@@ -212,7 +170,7 @@ to hatch-predator ;; predator procedure
     [
       fd 1
       ;; the predators will have a predation color similar to its parent,
-      ;; but this can mutate based on a normal range, staying between 0 and 100.
+      ;; this can mutate based on a normal range, but stays within normal values.
       ;; mean = parent's color, sd = mutation-predator (slider)
       set prey-mean from-color to-color random-normal prey-mean mutation-predator
     ]
@@ -220,9 +178,33 @@ to hatch-predator ;; predator procedure
 end
 
 
+;;         Unaltered from Wilensky model
+;; Each prey has an equal chance of reproducing
+;; depending on how close to carrying capacity the
+;; population is.
+to preys-reproduce ; prey procedure
+  ifelse breed = models
+  [ if random count models < carrying-capacity-models - count models
+     [ hatch-prey ] ]
+  [ if random count mimics < carrying-capacity-mimics - count mimics
+     [ hatch-prey ] ]
+end
 
-
-
+to hatch-prey ; prey procedure
+  if random-float 100 < reproduction-chance
+  [
+    hatch 1
+    [
+      fd 1
+      ;; the prey will have a color similar to its parent,
+      ;; this can mutate based on a normal range, but stays within normal values.
+      ;; mean = parent's color, sd = mutation-prey (slider)
+      let parent-color [visibility] of myself
+      set color to-color random-normal parent-color mutation-prey
+      set visibility from-color color
+    ]
+ ]
+end
 
 ;; helper to report a random color within range                                                 helper productions
 to-report random-color
@@ -264,14 +246,14 @@ end
 ;; from color to visibility percentage
 to-report from-color [value]
   ;; green - white - red -> 0 to 100
-  ifelse value < 35 [                                    ; red side
-    ifelse value > 15 [                                  ; light
+  ifelse value < 35 [                        ; red side
+    ifelse value > 15 [                      ; light
       set value -10 * value + 250
-    ][                                                   ; dark
+    ][                                       ; dark
       set value -10 * value + 50
     ]
   ][
-    set value 10 * value - 550
+    set value 10 * value - 550               ; green side
   ]
 
   ;; color needs to be within certain range
@@ -281,18 +263,15 @@ to-report from-color [value]
   ]
   report value
 end
-
-; Copyright 1997 Uri Wilensky.
-; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
-208
-12
-641
-446
+195
+10
+724
+540
 -1
 -1
-4.25
+5.21
 1
 10
 1
@@ -313,9 +292,9 @@ ticks
 30.0
 
 BUTTON
-10
+11
 268
-98
+99
 301
 setup
 setup
@@ -330,9 +309,9 @@ NIL
 1
 
 BUTTON
-100
+101
 268
-188
+189
 301
 go
 go
@@ -347,10 +326,10 @@ NIL
 0
 
 MONITOR
-645
-69
-752
-114
+1011
+137
+1104
+182
 NIL
 count models
 0
@@ -358,10 +337,10 @@ count models
 11
 
 MONITOR
-790
-343
-861
-388
+857
+234
+918
+279
 maximum
 max [visibility] of models
 3
@@ -369,10 +348,10 @@ max [visibility] of models
 11
 
 MONITOR
-718
-343
-789
-388
+798
+234
+854
+279
 average
 mean [visibility] of models
 3
@@ -380,10 +359,10 @@ mean [visibility] of models
 11
 
 MONITOR
-753
-69
-860
-114
+1011
+185
+1104
+230
 NIL
 count mimics
 0
@@ -391,10 +370,10 @@ count mimics
 11
 
 MONITOR
-790
-389
-861
-434
+857
+280
+918
+325
 maximum
 max [visibility] of mimics
 3
@@ -402,10 +381,10 @@ max [visibility] of mimics
 11
 
 MONITOR
-718
-389
-789
-434
+798
+280
+854
+325
 average
 mean [visibility] of mimics
 3
@@ -413,52 +392,50 @@ mean [visibility] of mimics
 11
 
 PLOT
-645
-119
-922
-339
+730
+10
+1007
+230
 Average Colors Over Time
 Time
 Average Visibility
 0.0
 100.0
--100.0
+0.0
 100.0
 true
 true
 "" ""
 PENS
+"Mimics" 1.0 0 -10899396 true "" "plot mean [visibility] of mimics"
 "Models" 1.0 0 -2674135 true "" "plot mean [visibility] of models"
 "Predators" 1.0 0 -6459832 true "" "plot mean [prey-mean] of predators"
-"Mimics > 0" 1.0 0 -13345367 true "" "plot mean [visibility] of mimics with [visibility >= 0]"
-"Mimics < 0" 1.0 0 -11783835 true "" "plot mean [visibility] of mimics with [visibility <= 0]"
-"Mimics" 1.0 0 -11221820 true "" "plot mean [visibility] of mimics"
 
 TEXTBOX
-649
-357
-735
-375
+732
+244
+798
+262
 Model colors:
 11
 0.0
 1
 
 TEXTBOX
-650
-399
-730
-417
+733
+286
+799
+304
 Mimic colors:
 11
 0.0
 1
 
 MONITOR
-862
-343
-933
-388
+921
+234
+978
+279
 minimum
 min [visibility] of models
 3
@@ -466,10 +443,10 @@ min [visibility] of models
 11
 
 MONITOR
-862
-389
-933
-434
+921
+280
+978
+325
 minimum
 min [visibility] of mimics
 3
@@ -477,45 +454,45 @@ min [visibility] of mimics
 11
 
 PLOT
-208
-449
-408
-599
+730
+329
+930
+479
 Model Visibility
-color / visibility
+visibility level
 count
--101.0
+0.0
 101.0
 0.0
 300.0
 false
 false
-"" "histogram [visibility] of models\nset-plot-x-range -101 101"
+"" "histogram [visibility] of models\nset-plot-x-range 0 101"
 PENS
-"model color" 1.0 1 -16777216 true "" ""
+"model color" 1.0 1 -5298144 true "" ""
 
 PLOT
-413
-449
-613
-599
+730
+482
+930
+632
 Mimic Visibility
-color / visibility
+visibility level
 count
--101.0
+0.0
 101.0
 0.0
 300.0
 false
 false
-"" "histogram [visibility] of mimics\nset-plot-x-range -101 101"
+"" "histogram [visibility] of mimics\nset-plot-x-range 0 101"
 PENS
-"Colubrid Colors" 1.0 1 -16777216 true "" ""
+"Colubrid Colors" 1.0 1 -12087248 true "" ""
 
 SLIDER
-11
+12
 378
-188
+189
 411
 prey-range
 prey-range
@@ -528,12 +505,12 @@ NIL
 HORIZONTAL
 
 PLOT
-617
-449
-817
-599
+932
+482
+1132
+632
 Predator mean preying color
-color
+preying mean
 count
 0.0
 10.0
@@ -541,26 +518,26 @@ count
 100.0
 false
 false
-"" "histogram [prey-mean] of predators\nset-plot-x-range -101 101"
+"" "histogram [prey-mean] of predators\nset-plot-x-range 0 101"
 PENS
-"default" 1.0 1 -16777216 true "" ""
+"default" 1.0 1 -8431303 true "" ""
 
 MONITOR
-824
-449
-930
-494
-energy
+1012
+10
+1105
+55
+mean energy
 mean [energy] of predators
-17
+2
 1
 11
 
 MONITOR
-645
-21
-751
-66
+1011
+89
+1104
+134
 count Predators
 count predators
 17
@@ -568,9 +545,9 @@ count predators
 11
 
 SLIDER
-11
+12
 414
-187
+188
 447
 reproduction-chance
 reproduction-chance
@@ -583,9 +560,9 @@ NIL
 HORIZONTAL
 
 SLIDER
-8
+9
 10
-187
+188
 43
 carrying-capacity-mimics
 carrying-capacity-mimics
@@ -598,9 +575,9 @@ NIL
 HORIZONTAL
 
 SLIDER
-8
+9
 45
-187
+188
 78
 carrying-capacity-models
 carrying-capacity-models
@@ -613,9 +590,9 @@ NIL
 HORIZONTAL
 
 SLIDER
-8
+9
 81
-187
+188
 114
 carrying-capacity-predators
 carrying-capacity-predators
@@ -628,9 +605,9 @@ NIL
 HORIZONTAL
 
 SLIDER
-11
+12
 450
-187
+188
 483
 energy-in-prey
 energy-in-prey
@@ -643,10 +620,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-934
-343
-991
-388
+981
+234
+1038
+279
 median
 median [visibility] of models
 3
@@ -654,10 +631,10 @@ median [visibility] of models
 11
 
 MONITOR
-934
-389
-991
-434
+981
+280
+1038
+325
 median
 mean [visibility] of mimics
 3
@@ -665,10 +642,10 @@ mean [visibility] of mimics
 11
 
 MONITOR
-992
-343
-1042
-388
+1041
+234
+1104
+279
 mode
 one-of modes [round visibility] of models
 3
@@ -676,10 +653,10 @@ one-of modes [round visibility] of models
 11
 
 MONITOR
-992
-389
-1042
-434
+1041
+280
+1104
+325
 mode
 one-of modes [round visibility] of mimics
 3
@@ -687,9 +664,9 @@ one-of modes [round visibility] of mimics
 11
 
 SLIDER
-11
+12
 486
-187
+188
 519
 base-visibility
 base-visibility
@@ -702,9 +679,9 @@ NIL
 HORIZONTAL
 
 SLIDER
-11
+12
 342
-188
+189
 375
 mutation-prey
 mutation-prey
@@ -717,9 +694,9 @@ NIL
 HORIZONTAL
 
 SLIDER
-11
+12
 306
-188
+189
 339
 mutation-predator
 mutation-predator
@@ -732,40 +709,40 @@ NIL
 HORIZONTAL
 
 SWITCH
-10
+11
 231
-188
+189
 264
 model-dangerous?
 model-dangerous?
-1
+0
 1
 -1000
 
 PLOT
-924
-170
-1084
-339
+933
+329
+1133
+479
 Population counts
 Ticks
-Number of animals
+Agent count
 0.0
 10.0
 0.0
 10.0
 true
-false
+true
 "" ""
 PENS
-"default" 1.0 0 -10402772 true "" "plot count predators"
-"pen-1" 1.0 0 -5298144 true "" "plot count models"
-"pen-2" 1.0 0 -13345367 true "" "plot count mimics"
+"Mimics" 1.0 0 -10899396 true "" "plot count mimics"
+"Models" 1.0 0 -2674135 true "" "plot count models"
+"Predators" 1.0 0 -6459832 true "" "plot count predators"
 
 SLIDER
-11
+12
 524
-187
+188
 557
 food-available
 food-available
@@ -778,9 +755,9 @@ NIL
 HORIZONTAL
 
 SLIDER
-11
+12
 559
-187
+188
 592
 energy-other-food
 energy-other-food
@@ -793,9 +770,9 @@ NIL
 HORIZONTAL
 
 SWITCH
-8
+9
 153
-188
+189
 186
 model-set-visibility?
 model-set-visibility?
@@ -804,9 +781,9 @@ model-set-visibility?
 -1000
 
 SWITCH
-8
+9
 118
-188
+189
 151
 mimic-set-visibility?
 mimic-set-visibility?
@@ -815,9 +792,9 @@ mimic-set-visibility?
 -1000
 
 SWITCH
-7
+8
 189
-188
+189
 222
 predator-set-visibility?
 predator-set-visibility?
@@ -826,13 +803,13 @@ predator-set-visibility?
 -1000
 
 SLIDER
-45
+46
 117
-188
+189
 150
 visibility-mimic
 visibility-mimic
--100
+0
 100
 0.0
 1
@@ -841,13 +818,13 @@ NIL
 HORIZONTAL
 
 SLIDER
-45
+46
 152
-188
+189
 185
 visibility-model
 visibility-model
--100
+0
 100
 100.0
 1
@@ -856,13 +833,13 @@ NIL
 HORIZONTAL
 
 SLIDER
-45
+46
 188
-188
+189
 221
 prey-visibility-predator
 prey-visibility-predator
--100
+0
 100
 0.0
 1
@@ -871,93 +848,15 @@ NIL
 HORIZONTAL
 
 @#$#@#$#@
-## WHAT IS IT?
+# CORAL SNAKE MIMICRY
 
-Batesian mimicry is an evolutionary relationship in which a harmless species (the mimic) has evolved so that it looks very similar to a completely different species that isn't harmless (the model).  A classic example of Batesian mimicry is the similar appearance of monarch butterflies and viceroy moths. Monarchs and viceroys are unrelated species that are both colored similarly --- bright orange with black patterns. Their colorations are so similar, in fact, that the two species are virtually indistinguishable from one another.
+## COLOUR SYSTEM
 
-The classic explanation for this phenomenon is that monarchs taste yucky.  Because monarchs eat milkweed, a plant full of toxins, they become essentially inedible to birds.  Researchers have documented birds vomiting within minutes of eating monarch butterflies.  The birds then remember the experience and avoid brightly colored orange butterfly/moth species.  Viceroys, although perfectly edible, avoid predation if they are colored bright orange because birds can't tell the difference.
+This version of the model uses the circular colour system. This means visibility values range between -100 to 100, corresponding to agent colours of green (0) to white(50)/black(-50) to red(±100). 
 
-Recent research now suggests that viceroys might also be unpalatable to bird predators, confusing this elegant explanation.  However, we have modeled the relationship anyway.  Batesian mimicry occurs in enough other situations (snakes, for example) that the explanation's general truth is unquestionable.  The monarch-viceroy story is so accessible --- and historically relevant --- that we believe it to be instructive even if its accuracy is now questioned.
+## CREDITS
 
-## HOW IT WORKS
-
-This model simulates the evolution of monarchs and viceroys from distinguishable, differently colored species to indistinguishable mimics and models.  At the simulation's beginning there are 450 monarchs and viceroys distributed randomly across the world.  The monarchs are all colored red, while the viceroys are all colored blue.  They are also distinguishable (to the human observer only) by their shape:  the letter "x" represents monarchs while the letter "o" represents viceroys.  Seventy-five birds are also randomly distributed across the world.
-
-When the model runs, the birds and butterflies (for the remainder of this description "butterfly" will be used as a general term for monarchs and viceroys, even though viceroys are technically moths) move randomly across the world.  When a bird encounters a butterfly it eats the butterfly, unless it has a memory that the butterfly's color is "yucky."  If a bird eats a monarch, it acquires a memory of the butterfly's color as yucky.
-
-As butterflies are eaten, they regenerate through asexual reproduction. Each turn, every butterfly must pass two "tests" in order to reproduce.  The first test is based on how many butterflies of that species already exist in the world. The carrying capacity of the world for each species is 225.  The chances of reproducing are smaller the closer to 225 each population gets.  The second test is simply a random test to keep reproduction in check (set to a 4% chance in this model).  When a butterfly does reproduce it either creates an offspring identical to itself or it creates a mutant.  Mutant offspring are the same species but have a random color between blue and red, but ending in five (e.g. color equals 15, 25, 35, 45, 55, 65, 75, 85, 95, 105).  Both monarchs and Viceroys have equal opportunities to reproduce mutants.
-
-Birds can remember up to MEMORY-SIZE yucky colors at a time.  The default value is three.  If a bird has memories of three yucky colors and it eats a monarch with a new yucky color, the bird "forgets" its oldest memory and replaces it with the new one.  Birds also forget yucky colors after a certain amount of time.
-
-## HOW TO USE IT
-
-Each turn is called a TICK in this model.
-
-The MEMORY-DURATION slider determines how long a bird can remember a color as being yucky.  The MEMORY-SIZE slider determines the number of memories a bird can hold in its memory at once.
-
-The MUTATION-RATE slider determines the chances that a butterfly's offspring will be a mutant.  Setting the slider to 100 will make every offspring a mutant.  Setting the slider to 0 will make no offspring a mutant.
-
-The SETUP button clears the world and randomly distributes the monarchs (all red), viceroys (all blue), and birds.  The GO button starts the simulation.
-
-The number of monarchs and viceroys in the world are displayed in monitor as well as the maximum, minimum, and average colors for each type of butterfly.
-
-The plot shows the average color of the monarchs and the average color of the viceroys plotted against time.
-
-## THINGS TO NOTICE
-
-Initially, the birds don't have any memory, so both monarchs and viceroys are eaten equally. However, soon the birds "learn" that red is a yucky color and this protects most of the monarchs.  As a result, the monarch population makes a comeback toward carrying capacity while the viceroy population continues to decline.  Notice also that as reproduction begins to replace eaten butterflies, some of the replacements are mutants and therefore randomly colored.
-
-As the simulation progresses, birds continue to eat mostly butterflies that aren't red.  Occasionally, of course, a bird "forgets" that red is yucky, but a forgetful bird is immediately reminded when it eats another red monarch.  For the unlucky monarch that did the reminding, being red was no advantage, but every other red butterfly is safe from that bird for a while longer.  Monarch (non-red) mutants are therefore apt to be eaten.  Notice that throughout the simulation the average color of monarchs continues to be very close to its original value of 15.  A few mutant monarchs are always being born with random colors, but they never become dominant, as they and their offspring have a slim chance for survival.
-
-Meanwhile, as the simulation continues, viceroys continue to be eaten, but as enough time passes, the chances are good that some viceroys will give birth to red mutants.  These butterflies and their offspring are likely to survive longer because they resemble the red monarchs.  With a mutation rate of 5%, it is likely that their offspring will be red too.  Soon most of the viceroy population is red.  With its protected coloration, the viceroy population will return to carrying capacity.
-
-## THINGS TO TRY
-
-If the MUTATION-RATE is high, advantageous color genes do not reproduce themselves.  Conversely, if MUTATION-RATE is too low, the chances of an advantageous mutant (red) viceroy being born are so slim that it may not happen enough, and the population may go extinct.  What is the most ideal setting for the MUTATION-RATE slider so that a stable state emerges most quickly in which there are red monarchs and viceroys co-existing in the world?  Why?
-
-If the MEMORY-LENGTH slider is set too low, birds are unable to remember that certain colors are yucky.  How low can the MEMORY-LENGTH slider be set so that a stable state of co-existing red monarchs and viceroys emerges?
-
-If you set MUTATION-RATE to 100 and MEMORY to 0, you will soon have two completely randomly colored populations.  Once the average color of both species is about 55, return the sliders to MUTATION-RATE equals 16 and MEMORY equals 30 without resetting the model.  Does a stable mimicry state emerge?  What is the "safe" color?
-
-## EXTENDING THE MODEL
-
-One very simple extension to this model is to add a RANDOM-COLOR button.  This button would give every butterfly in the world a random color.  The advantage of red would be gone, but some color (which could be red, or any other color) would eventually emerge as the advantageous color.  This models the evolutionary process from an earlier starting place, presumably when even monarchs had different colors.
-
-It would be interesting to see what would happen if birds were made smarter than they are in this model.  A smart bird should probably continue to experiment with yucky colors a few times before being "convinced" that all butterflies of that color are indeed distasteful.
-
-You could try to add variables that kept track of how many yucky individuals of the same color a bird ate.  Presumably if a bird has eaten several monarchs that are all the same color, it will be especially attentive to avoiding that color as compared to if it had just eaten one butterfly of that color.  Making changes of this nature would presumably make the proportion of models and mimics more in keeping with the predictions of theorists that there are generally more models than mimics.  In the current model, birds aren't smart enough to learn that most butterflies may be harmless in a given situation.
-
-In a real world situation, the birds would also reproduce.  Young birds would not have the experiences necessary to know which colors to avoid.  Reproduction of birds, depending on how it happened and how often, might change the dynamics of this model considerably.
-
-One could also refine the mutation-making procedures of the model so that a butterfly is more likely to reproduce a mutant that is only slightly differently colored than to reproduce a mutant that is completely differently colored.  In the current model, mutants' colors are simply random.
-
-## HOW TO CITE
-
-If you mention this model or the NetLogo software in a publication, we ask that you include the citations below.
-
-For the model itself:
-
-* Wilensky, U. (1997).  NetLogo Mimicry model.  http://ccl.northwestern.edu/netlogo/models/Mimicry.  Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL.
-
-Please cite the NetLogo software as:
-
-* Wilensky, U. (1999). NetLogo. http://ccl.northwestern.edu/netlogo/. Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL.
-
-## COPYRIGHT AND LICENSE
-
-Copyright 1997 Uri Wilensky.
-
-![CC BY-NC-SA 3.0](http://ccl.northwestern.edu/images/creativecommons/byncsa.png)
-
-This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 License.  To view a copy of this license, visit https://creativecommons.org/licenses/by-nc-sa/3.0/ or send a letter to Creative Commons, 559 Nathan Abbott Way, Stanford, California 94305, USA.
-
-Commercial licenses are also available. To inquire about commercial licenses, please contact Uri Wilensky at uri@northwestern.edu.
-
-This model was created as part of the project: CONNECTED MATHEMATICS: MAKING SENSE OF COMPLEX PHENOMENA THROUGH BUILDING OBJECT-BASED PARALLEL MODELS (OBPML).  The project gratefully acknowledges the support of the National Science Foundation (Applications of Advanced Technologies Program) -- grant numbers RED #9552950 and REC #9632612.
-
-This model was converted to NetLogo as part of the projects: PARTICIPATORY SIMULATIONS: NETWORK-BASED DESIGN FOR SYSTEMS LEARNING IN CLASSROOMS and/or INTEGRATED SIMULATION AND MODELING ENVIRONMENT. The project gratefully acknowledges the support of the National Science Foundation (REPP & ROLE programs) -- grant numbers REC #9814682 and REC-0126227. Converted from StarLogoT to NetLogo, 2001.
-
-<!-- 1997 2001 -->
+This model was loosely based on Wilensky's model of Batesian mimicry (1997), which can be found in the NetLogo model library, labelled "Mimicry".
 @#$#@#$#@
 default
 true
@@ -1599,79 +1498,10 @@ NetLogo 6.4.0
       <value value="140"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="200norm" repetitions="1" runMetricsEveryStep="true">
+  <experiment name="linear" repetitions="1" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
-    <timeLimit steps="200000"/>
-    <metric>count turtles</metric>
-    <metric>count mimics</metric>
-    <metric>count models</metric>
-    <metric>count predators</metric>
-    <metric>[visibility] of mimics</metric>
-    <metric>[visibility] of models</metric>
-    <metric>[prey-mean] of predators</metric>
-    <metric>list mean [visibility] of mimics</metric>
-    <metric>list mean [visibility] of models</metric>
-    <metric>list mean [prey-mean] of predators</metric>
-    <enumeratedValueSet variable="carrying-capacity-mimics">
-      <value value="200"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="mimic-set-visibility?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="prey-range">
-      <value value="30"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="energy-other-food">
-      <value value="30"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="base-visibility">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="prey-visibility-predator">
-      <value value="0"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="carrying-capacity-models">
-      <value value="300"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="mutation-prey">
-      <value value="15"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="mutation-predator">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="visibility-model">
-      <value value="100"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="energy-in-prey">
-      <value value="100"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="model-set-visibility?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="food-available">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="visibility-mimic">
-      <value value="0"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="reproduction-chance">
-      <value value="0.7"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="model-dangerous?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="predator-set-visibility?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="carrying-capacity-predators">
-      <value value="150"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="200bignodanger" repetitions="1" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <timeLimit steps="200000"/>
+    <timeLimit steps="50000"/>
     <metric>count turtles</metric>
     <metric>count mimics</metric>
     <metric>count models</metric>
@@ -1732,6 +1562,206 @@ NetLogo 6.4.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="predator-set-visibility?">
       <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-predators">
+      <value value="150"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="linearRandom" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="50000"/>
+    <metric>count turtles</metric>
+    <metric>count mimics</metric>
+    <metric>count models</metric>
+    <metric>count predators</metric>
+    <metric>[visibility] of mimics</metric>
+    <metric>[visibility] of models</metric>
+    <metric>[prey-mean] of predators</metric>
+    <metric>list mean [visibility] of mimics</metric>
+    <metric>list mean [visibility] of models</metric>
+    <metric>list mean [prey-mean] of predators</metric>
+    <enumeratedValueSet variable="carrying-capacity-mimics">
+      <value value="200"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mimic-set-visibility?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-range">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-other-food">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="base-visibility">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-visibility-predator">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-models">
+      <value value="300"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-prey">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-predator">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-model">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-in-prey">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="model-set-visibility?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="food-available">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-mimic">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="reproduction-chance">
+      <value value="0.7"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="model-dangerous?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predator-set-visibility?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-predators">
+      <value value="150"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="ranran" repetitions="100" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="10005"/>
+    <metric>median [visibility] of models</metric>
+    <metric>median [visibility] of mimics</metric>
+    <runMetricsCondition>ticks = 10000</runMetricsCondition>
+    <enumeratedValueSet variable="carrying-capacity-mimics">
+      <value value="200"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mimic-set-visibility?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-range">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-other-food">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="base-visibility">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-visibility-predator">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-models">
+      <value value="300"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-prey">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-predator">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-model">
+      <value value="4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-in-prey">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="model-set-visibility?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="food-available">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-mimic">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="reproduction-chance">
+      <value value="0.7"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="model-dangerous?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predator-set-visibility?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-predators">
+      <value value="150"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="fewmodels" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="50000"/>
+    <metric>count turtles</metric>
+    <metric>count mimics</metric>
+    <metric>count models</metric>
+    <metric>count predators</metric>
+    <metric>[visibility] of mimics</metric>
+    <metric>[visibility] of models</metric>
+    <metric>[prey-mean] of predators</metric>
+    <metric>list mean [visibility] of mimics</metric>
+    <metric>list mean [visibility] of models</metric>
+    <metric>list mean [prey-mean] of predators</metric>
+    <enumeratedValueSet variable="carrying-capacity-mimics">
+      <value value="600"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mimic-set-visibility?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-range">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-other-food">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="base-visibility">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-visibility-predator">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="carrying-capacity-models">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-prey">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mutation-predator">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-model">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="energy-in-prey">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="model-set-visibility?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="food-available">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visibility-mimic">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="reproduction-chance">
+      <value value="0.7"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="model-dangerous?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predator-set-visibility?">
+      <value value="false"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="carrying-capacity-predators">
       <value value="150"/>
