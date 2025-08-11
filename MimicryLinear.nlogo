@@ -222,7 +222,7 @@ to-report to-color [value]
     if value < 0  [set value abs value]
   ]
 
-  ;; 0-100 -> green - white - red
+  ;; 0 - 100 -> green - white - red
   ifelse value > 50 [
     set value 15 + sqrt ((value / -2) + 50)
   ][
@@ -234,7 +234,7 @@ end
 
 ;; from color to visibility percentage
 to-report from-color [value]
-  ;; green - white - red -> 0-100
+  ;; green - white - red -> 0 - 100
   ifelse value < 35 [
     set value -2 * (value - 15) * (value - 15) + 100
   ][

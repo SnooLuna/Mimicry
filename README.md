@@ -1,0 +1,2 @@
+The thesis that this repository belongs to uses NetLogo 6.4.0. to run the code available here. 
+The two .nlogo files each contain a copy of the model with one of the two colour systems described in the thesis.
